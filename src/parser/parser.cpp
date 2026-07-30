@@ -38,7 +38,7 @@ Token Parser::expect(TokenType type, const std::string& message)
     {
         return advance();
     }
-    throw std::runtime_error(message);
+    throw ParseError(message + " at line " + std::to_string(peek().line));
 }
 
 std::unique_ptr<Expr> Parser::parsePrimary()
@@ -51,9 +51,34 @@ std::unique_ptr<Expr> Parser::parsePrimary()
     if (peek().type == TokenType::IDENTIFIER)
     {
         Token token = advance();
+
+        // Function call: identifier immediately followed by '('
+        if (peek().type == TokenType::LEFT_PAREN)
+        {
+            advance(); // consume '('
+            std::vector<std::unique_ptr<Expr>> arguments;
+            if (peek().type != TokenType::RIGHT_PAREN)
+            {
+                arguments.push_back(parseExpression());
+                while (match(TokenType::COMMA))
+                {
+                    arguments.push_back(parseExpression());
+                }
+            }
+            expect(TokenType::RIGHT_PAREN, "expected ')' after arguments");
+            return std::make_unique<CallExpr>(token.lexeme, std::move(arguments));
+        }
+
         return std::make_unique<Identifier>(token.lexeme);
     }
-    throw std::runtime_error("unexpected token");
+    if (peek().type == TokenType::LEFT_PAREN)
+    {
+        advance(); // consume '('
+        std::unique_ptr<Expr> expr = parseExpression();
+        expect(TokenType::RIGHT_PAREN, "expected ')' after expression");
+        return expr;
+    }
+    throw ParseError("unexpected token '" + peek().lexeme + "' at line " + std::to_string(peek().line));
 }
 
 std::unique_ptr<Expr> Parser::parseTerm()
@@ -88,7 +113,8 @@ std::unique_ptr<Expr> Parser::parseComparison()
 {
     std::unique_ptr<Expr> left = parseAdditive();
 
-    while (peek().type == TokenType::LESS || peek().type == TokenType::GREATER)
+    while (peek().type == TokenType::LESS || peek().type == TokenType::GREATER ||
+           peek().type == TokenType::LESS_EQUAL || peek().type == TokenType::GREATER_EQUAL)
     {
         Token op = advance();
         std::unique_ptr<Expr> right = parseAdditive();
@@ -98,7 +124,7 @@ std::unique_ptr<Expr> Parser::parseComparison()
     return left;
 }
 
-std::unique_ptr<Expr> Parser::parseExpression()
+std::unique_ptr<Expr> Parser::parseEquality()
 {
     std::unique_ptr<Expr> left = parseComparison();
 
@@ -106,6 +132,34 @@ std::unique_ptr<Expr> Parser::parseExpression()
     {
         Token op = advance();
         std::unique_ptr<Expr> right = parseComparison();
+        left = std::make_unique<BinaryExpr>(op, std::move(left), std::move(right));
+    }
+
+    return left;
+}
+
+std::unique_ptr<Expr> Parser::parseLogicalAnd()
+{
+    std::unique_ptr<Expr> left = parseEquality();
+
+    while (peek().type == TokenType::AND)
+    {
+        Token op = advance();
+        std::unique_ptr<Expr> right = parseEquality();
+        left = std::make_unique<BinaryExpr>(op, std::move(left), std::move(right));
+    }
+
+    return left;
+}
+
+std::unique_ptr<Expr> Parser::parseExpression()
+{
+    std::unique_ptr<Expr> left = parseLogicalAnd();
+
+    while (peek().type == TokenType::OR)
+    {
+        Token op = advance();
+        std::unique_ptr<Expr> right = parseLogicalAnd();
         left = std::make_unique<BinaryExpr>(op, std::move(left), std::move(right));
     }
 
@@ -137,6 +191,12 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         return parseIfStatement();
     case TokenType::WHILE:
         return parseWhileStatement();
+    case TokenType::PRINT:
+        return parsePrintStatement();
+    case TokenType::FUNCTION:
+        return parseFunctionStatement();
+    case TokenType::RETURN:
+        return parseReturnStatement();
     case TokenType::LEFT_BRACE:
         return parseBlock();
     case TokenType::IDENTIFIER:
@@ -144,9 +204,9 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         {
             return parseAssignmentStatement();
         }
-        throw std::runtime_error("expected '=' after identifier in statement");
+        throw ParseError("expected '=' after identifier at line " + std::to_string(peek().line));
     default:
-        throw std::runtime_error("unexpected token at start of statement");
+        throw ParseError("unexpected token '" + peek().lexeme + "' at line " + std::to_string(peek().line));
     }
 }
 
@@ -206,4 +266,43 @@ std::unique_ptr<BlockStatement> Parser::parseBlock()
     }
     expect(TokenType::RIGHT_BRACE, "expected '}' after block");
     return std::make_unique<BlockStatement>(std::move(statements));
+}
+
+std::unique_ptr<Stmt> Parser::parsePrintStatement()
+{
+    expect(TokenType::PRINT, "expected 'print'");
+    std::unique_ptr<Expr> expression = parseExpression();
+    expect(TokenType::SEMICOLON, "expected ';' after print statement");
+    return std::make_unique<PrintStatement>(std::move(expression));
+}
+
+std::unique_ptr<Stmt> Parser::parseFunctionStatement()
+{
+    expect(TokenType::FUNCTION, "expected 'function'");
+    Token name = expect(TokenType::IDENTIFIER, "expected function name");
+    expect(TokenType::LEFT_PAREN, "expected '(' after function name");
+
+    std::vector<std::string> params;
+    if (peek().type != TokenType::RIGHT_PAREN)
+    {
+        Token first = expect(TokenType::IDENTIFIER, "expected parameter name");
+        params.push_back(first.lexeme);
+        while (match(TokenType::COMMA))
+        {
+            Token p = expect(TokenType::IDENTIFIER, "expected parameter name");
+            params.push_back(p.lexeme);
+        }
+    }
+    expect(TokenType::RIGHT_PAREN, "expected ')' after parameters");
+
+    std::unique_ptr<BlockStatement> body = parseBlock();
+    return std::make_unique<FunctionStatement>(name.lexeme, std::move(params), std::move(body));
+}
+
+std::unique_ptr<Stmt> Parser::parseReturnStatement()
+{
+    expect(TokenType::RETURN, "expected 'return'");
+    std::unique_ptr<Expr> value = parseExpression();
+    expect(TokenType::SEMICOLON, "expected ';' after return statement");
+    return std::make_unique<ReturnStatement>(std::move(value));
 }

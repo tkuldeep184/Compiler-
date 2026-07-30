@@ -9,19 +9,29 @@ void Environment::define(const std::string& name, int value)
 int Environment::get(const std::string& name)
 {
     auto it = values.find(name);
-    if (it == values.end())
+    if (it != values.end())
     {
-        throw std::runtime_error("Undefined variable '" + name + "'");
+        return it->second;
     }
-    return it->second;
+    if (parent != nullptr)
+    {
+        return parent->get(name);
+    }
+    throw std::runtime_error("Undefined variable '" + name + "'");
 }
 
 void Environment::assign(const std::string& name, int value)
 {
     auto it = values.find(name);
-    if (it == values.end())
+    if (it != values.end())
     {
-        throw std::runtime_error("Undefined variable '" + name + "'");
+        it->second = value;
+        return;
     }
-    it->second = value;
+    if (parent != nullptr)
+    {
+        parent->assign(name, value);
+        return;
+    }
+    throw std::runtime_error("Undefined variable '" + name + "'");
 }

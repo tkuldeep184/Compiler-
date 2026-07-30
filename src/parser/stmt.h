@@ -9,6 +9,9 @@ struct AssignmentStatement;
 struct IfStatement;
 struct WhileStatement;
 struct BlockStatement;
+struct PrintStatement;
+struct FunctionStatement;
+struct ReturnStatement;
 
 struct StmtVisitor {
     virtual void visit(LetStatement& stmt) = 0;
@@ -16,6 +19,9 @@ struct StmtVisitor {
     virtual void visit(IfStatement& stmt) = 0;
     virtual void visit(WhileStatement& stmt) = 0;
     virtual void visit(BlockStatement& stmt) = 0;
+    virtual void visit(PrintStatement& stmt) = 0;
+    virtual void visit(FunctionStatement& stmt) = 0;
+    virtual void visit(ReturnStatement& stmt) = 0;
     virtual ~StmtVisitor() = default;
 };
 
@@ -79,6 +85,40 @@ struct WhileStatement : public Stmt {
     WhileStatement(std::unique_ptr<Expr> condition,
                    std::unique_ptr<BlockStatement> body)
         : condition(std::move(condition)), body(std::move(body)) {}
+    void accept(StmtVisitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
+
+struct PrintStatement : public Stmt {
+    std::unique_ptr<Expr> expression;
+
+    PrintStatement(std::unique_ptr<Expr> expression)
+        : expression(std::move(expression)) {}
+    void accept(StmtVisitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
+
+struct FunctionStatement : public Stmt {
+    std::string name;
+    std::vector<std::string> params;
+    std::unique_ptr<BlockStatement> body;
+
+    FunctionStatement(const std::string name,
+                      std::vector<std::string> params,
+                      std::unique_ptr<BlockStatement> body)
+        : name(name), params(std::move(params)), body(std::move(body)) {}
+    void accept(StmtVisitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
+
+struct ReturnStatement : public Stmt {
+    std::unique_ptr<Expr> value;
+
+    ReturnStatement(std::unique_ptr<Expr> value)
+        : value(std::move(value)) {}
     void accept(StmtVisitor& visitor) override {
         visitor.visit(*this);
     }

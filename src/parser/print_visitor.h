@@ -16,4 +16,7 @@ struct PrintVisitor : public Visitor {
     void visit(Identifier& expr) override {
         std::cout << "Identifier(" << expr.name << ")";
     }
+    void visit(CallExpr& expr) override {
+        std::cout << "CallExpr(" << expr.callee << ", args=" << expr.arguments.size() << ")";
+    }
 };

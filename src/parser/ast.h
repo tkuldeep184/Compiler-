@@ -1,16 +1,19 @@
 #pragma once
 #include <memory>
+#include <vector>
 #include "../lexer/token.h"
 #include <iostream>
 
 struct BinaryExpr;
 struct IntegerLiteral;
 struct Identifier;
+struct CallExpr;
 
 struct Visitor {
     virtual void visit(BinaryExpr& expr) = 0;
     virtual void visit(IntegerLiteral& expr) = 0;
     virtual void visit(Identifier& expr) = 0;
+    virtual void visit(CallExpr& expr) = 0;
     virtual ~Visitor() = default;
 };
 
@@ -41,6 +44,17 @@ struct IntegerLiteral : public Expr {
 struct Identifier : public Expr {
     std::string name;
     Identifier(const std::string name) : name(name) {}
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
+
+struct CallExpr : public Expr {
+    std::string callee;
+    std::vector<std::unique_ptr<Expr>> arguments;
+
+    CallExpr(const std::string callee, std::vector<std::unique_ptr<Expr>> arguments)
+        : callee(callee), arguments(std::move(arguments)) {}
     void accept(Visitor& visitor) override {
         visitor.visit(*this);
     }

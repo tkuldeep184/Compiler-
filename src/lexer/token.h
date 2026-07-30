@@ -18,6 +18,8 @@ enum class TokenType
     ELSE,
     WHILE,
     RETURN,
+    FUNCTION,
+    PRINT,
     // Operators
     ASSIGN,
     PLUS,
@@ -29,6 +31,11 @@ enum class TokenType
     NOT_EQUAL,
     LESS,
     GREATER,
+    LESS_EQUAL,
+    GREATER_EQUAL,
+    // Logical
+    AND,
+    OR,
     // Symbols
     LEFT_PAREN,
     RIGHT_PAREN,
@@ -66,6 +73,10 @@ inline std::string tokenTypeToString(TokenType type)
         return "WHILE";
     case TokenType::RETURN:
         return "RETURN";
+    case TokenType::FUNCTION:
+        return "FUNCTION";
+    case TokenType::PRINT:
+        return "PRINT";
     case TokenType::ASSIGN:
         return "ASSIGN";
     case TokenType::PLUS:
@@ -84,6 +95,14 @@ inline std::string tokenTypeToString(TokenType type)
         return "LESS";
     case TokenType::GREATER:
         return "GREATER";
+    case TokenType::LESS_EQUAL:
+        return "LESS_EQUAL";
+    case TokenType::GREATER_EQUAL:
+        return "GREATER_EQUAL";
+    case TokenType::AND:
+        return "AND";
+    case TokenType::OR:
+        return "OR";
     case TokenType::LEFT_PAREN:
         return "LEFT_PAREN";
     case TokenType::RIGHT_PAREN:

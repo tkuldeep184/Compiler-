@@ -68,7 +68,18 @@ void Lexer::scanToken()
         tokens.push_back({TokenType::STAR, "*", line, column});
         break;
     case '/':
-        tokens.push_back({TokenType::SLASH, "/", line, column});
+        if (peek() == '/')
+        {
+            // Line comment: consume until end of line (or end of source)
+            while (peek() != '\n' && peek() != '\0')
+            {
+                advance();
+            }
+        }
+        else
+        {
+            tokens.push_back({TokenType::SLASH, "/", line, column});
+        }
         break;
     case '=':
         if (peek() == '=')
@@ -93,10 +104,48 @@ void Lexer::scanToken()
         }
         break;
     case '<':
-        tokens.push_back({TokenType::LESS, "<", line, column});
+        if (peek() == '=')
+        {
+            advance();
+            tokens.push_back({TokenType::LESS_EQUAL, "<=", line, column});
+        }
+        else
+        {
+            tokens.push_back({TokenType::LESS, "<", line, column});
+        }
         break;
     case '>':
-        tokens.push_back({TokenType::GREATER, ">", line, column});
+        if (peek() == '=')
+        {
+            advance();
+            tokens.push_back({TokenType::GREATER_EQUAL, ">=", line, column});
+        }
+        else
+        {
+            tokens.push_back({TokenType::GREATER, ">", line, column});
+        }
+        break;
+    case '&':
+        if (peek() == '&')
+        {
+            advance();
+            tokens.push_back({TokenType::AND, "&&", line, column});
+        }
+        else
+        {
+            tokens.push_back({TokenType::UNKNOWN, "&", line, column});
+        }
+        break;
+    case '|':
+        if (peek() == '|')
+        {
+            advance();
+            tokens.push_back({TokenType::OR, "||", line, column});
+        }
+        else
+        {
+            tokens.push_back({TokenType::UNKNOWN, "|", line, column});
+        }
         break;
     case '(':
         tokens.push_back({TokenType::LEFT_PAREN, "(", line, column});
@@ -128,9 +177,9 @@ void Lexer::scanToken()
             std::string num = source.substr(start, current - start);
             tokens.push_back({TokenType::INTEGER, num, line, column});
         }
-        else if (isalpha(c))
+        else if (isalpha(c) || c == '_')
         {
-            while (isalpha(peek()) || isdigit(peek()))
+            while (isalpha(peek()) || isdigit(peek()) || peek() == '_')
             {
                 advance();
             }
@@ -150,6 +199,10 @@ void Lexer::scanToken()
                 type = TokenType::WHILE;
             else if (word == "return")
                 type = TokenType::RETURN;
+            else if (word == "function")
+                type = TokenType::FUNCTION;
+            else if (word == "print")
+                type = TokenType::PRINT;
             else
                 type = TokenType::IDENTIFIER;
 

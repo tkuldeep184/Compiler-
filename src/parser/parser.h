@@ -4,6 +4,14 @@
 #include "../parser/stmt.h"
 #include <vector>
 #include <memory>
+#include <stdexcept>
+#include <string>
+
+class ParseError : public std::runtime_error
+{
+public:
+    explicit ParseError(const std::string& message) : std::runtime_error(message) {}
+};
 
 class Parser
 {
@@ -27,11 +35,16 @@ private:
     std::unique_ptr<Stmt> parseAssignmentStatement();
     std::unique_ptr<Stmt> parseIfStatement();
     std::unique_ptr<Stmt> parseWhileStatement();
+    std::unique_ptr<Stmt> parsePrintStatement();
+    std::unique_ptr<Stmt> parseFunctionStatement();
+    std::unique_ptr<Stmt> parseReturnStatement();
     std::unique_ptr<BlockStatement> parseBlock();
 
     std::unique_ptr<Expr> parsePrimary();
     std::unique_ptr<Expr> parseTerm();
     std::unique_ptr<Expr> parseAdditive();
     std::unique_ptr<Expr> parseComparison();
+    std::unique_ptr<Expr> parseEquality();
+    std::unique_ptr<Expr> parseLogicalAnd();
     std::unique_ptr<Expr> parseExpression();
 };
